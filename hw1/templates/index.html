@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridworld RL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@2.1.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f8f9fa; }
+        .container { margin-top: 30px; }
+        #grid-container, #policy-container, #value-container {
+            display: grid;
+            margin: 20px auto;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .cell, .policy-cell, .value-cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .start { background-color: #28a745; color: white; }
+        .goal { background-color: #dc3545; color: white; }
+        .dead { background-color: #007bff; color: white; }
+        .obstacle { background-color: #6c757d; }
+        .policy-grid, .value-grid {
+            display: grid;
+            padding: 10px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="text-primary">Reinforcement Learning Gridworld</h1>
+        <div class="well">
+            <label for="size">Grid Size (5-9): </label>
+            <input type="number" id="size" min="5" max="9" value="7" class="form-control" style="width: 100px; display: inline-block;">
+            <button class="btn btn-primary" onclick="generateGrid()">Generate Grid</button>
+        </div>
+
+        <div class="btn-group" role="group">
+            <button class="btn btn-success" onclick="setMode('start')">Set Start</button>
+            <button class="btn btn-danger" onclick="setMode('goal')">Set Goal</button>
+            <button class="btn btn-info" onclick="setMode('dead')">Set Dead</button>
+        </div>
+
+        <div id="grid-container"></div>
+
+        <div class="container">
+            <div class="row justify-content-around">
+                <div class="col-sm-6">
+                    <button class="btn btn-warning" onclick="generatePolicy()" style="margin-top: 20px;">Generate Policy</button>
+                    <div id="policy-container"></div>
+                </div>
+                <div class="col-sm-6">
+                    <button class="btn btn-info" onclick="generateValueMatrix()" style="margin-top: 20px;">Generate Value Matrix</button>
+                    <div id="value-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gridSize = 7;
+        let mode = 'start';
+        let grid = [];
+        let obstacles = [];
+        let policy = [];
+        let valueMatrix = [];
+
+        function setMode(selectedMode) {
+            mode = selectedMode;
+        }
+
+        function generateGrid() {
+            gridSize = document.getElementById('size').value;
+            fetch('/generate_grid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ size: gridSize })
+            })
+            .then(response => response.json())
+            .then(data => {
+                grid = data.grid;
+                obstacles = data.obstacles;
+                drawGrid();
+            });
+        }
+
+        function drawGrid() {
+            let container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
+            container.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
+
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    let cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    if (grid[i][j] === 'obstacle') {
+                        cell.classList.add('obstacle');
+                    }
+                    cell.dataset.x = i;
+                    cell.dataset.y = j;
+                    cell.onclick = () => handleCellClick(i, j, cell);
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function handleCellClick(x, y, cell) {
+            if (obstacles.some(ob => ob[0] === x && ob[1] === y)) return;
+
+            let endpoint = '';
+            if (mode === 'start') endpoint = '/update_start';
+            else if (mode === 'goal') endpoint = '/update_goal';
+            else if (mode === 'dead') endpoint = '/update_dead';
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x, y })
+            }).then(response => response.json())
+              .then(() => {
+                  document.querySelectorAll(`.${mode}`).forEach(c => c.classList.remove(mode));
+                  cell.classList.add(mode);
+              });
+        }
+
+        function generatePolicy() {
+            fetch('/generate_policy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    size: gridSize,
+                    obstacles: obstacles
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                policy = data.policy;
+                displayPolicy();
+            });
+        }
+
+        function displayPolicy() {
+            let container = document.getElementById('policy-container');
+            container.innerHTML = '<h3>Policy Matrix</h3>';
+            let table = document.createElement('div');
+            table.classList.add('policy-grid');
+            table.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
+            table.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
+
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    let cell = document.createElement('div');
+                    cell.classList.add('policy-cell');
+                    cell.innerText = policy[i][j] || '';
+                    if (grid[i][j] == 'obstacle') {
+                        cell.classList.add('obstacle');
+                    }
+                    table.appendChild(cell);
+                }
+            }
+            container.appendChild(table);
+        }
+
+        function generateValueMatrix() {
+            let goalCell = document.querySelector(".goal");
+            let deadCell = document.querySelector(".dead");
+            let obstacleCells = document.querySelectorAll(".obstacle");
+
+            if (!goalCell || !deadCell) {
+                alert("Please set both a goal and a dead state before generating the value matrix.");
+                return;
+            }
+
+            let goal = [parseInt(goalCell.dataset.x), parseInt(goalCell.dataset.y)];
+            let dead = [parseInt(deadCell.dataset.x), parseInt(deadCell.dataset.y)];
+
+            let obstacles = Array.from(obstacleCells).map(cell => [
+                parseInt(cell.dataset.x),
+                parseInt(cell.dataset.y)
+            ]);
+
+            fetch('/generate_value_matrix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    size: gridSize,
+                    goal: goal,
+                    dead: dead,
+                    obstacles: obstacles,
+                    policy: policy
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                valueMatrix = data.value_matrix;
+                console.log(valueMatrix);
+                displayValueMatrix();
+            })
+            .catch(error => console.error("Error fetching value matrix:", error));
+        }
+
+        function displayValueMatrix() {
+            let container = document.getElementById('value-container');
+            container.innerHTML = '<h3>Value Matrix</h3>';
+            let table = document.createElement('div');
+            table.classList.add('value-grid');
+            table.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
+            table.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
+
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    let cell = document.createElement('div');
+                    cell.classList.add('value-cell');
+                    cell.innerText = valueMatrix[i][j].toFixed(2);
+                    if (grid[i][j] == 'obstacle') {
+                        cell.classList.add('obstacle');
+                    }
+                    table.appendChild(cell);
+                }
+            }
+            container.appendChild(table);
+        }
+    </script>
+
+</body>
+</html>
