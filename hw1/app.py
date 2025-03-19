@@ -49,11 +49,11 @@ def generate_policy():
     policy = [[random.choice(action_symbols) if (i, j) not in obstacles else '' for j in range(size)] for i in range(size)]
     return jsonify({'policy': policy})
 
-def policy_iteration(size, obstacles, policy, goal, dead):
+def value_evaluation(size, obstacles, policy, goal, dead):
     actions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # Right, Left, Down, Up
     value_matrix = np.zeros((size, size))
-    
     rewards = np.full((size, size), -0.001)
+    
     for x, y in obstacles:
         rewards[x, y] = -1
     rewards[goal[0], goal[1]] = 20
@@ -67,17 +67,13 @@ def policy_iteration(size, obstacles, policy, goal, dead):
                 if (i, j) in obstacles or (i, j) == goal or (i, j) == dead:
                     continue
                 
-                values = []
-                for idx, (dx, dy) in enumerate(actions):
-                    ni, nj = i + dx, j + dy
-                    if 0 <= ni < size and 0 <= nj < size:
-                        values.append(rewards[ni, nj] + discount_factor * value_matrix[ni, nj])
-                    else:
-                        values.append(rewards[i, j] + discount_factor * value_matrix[i, j])
+                dx, dy = actions[action_symbols.index(policy[i][j])]  # Follow given policy
+                ni, nj = i + dx, j + dy
+                if 0 <= ni < size and 0 <= nj < size:
+                    new_value_matrix[i, j] = rewards[ni, nj] + discount_factor * value_matrix[ni, nj]
+                else:
+                    new_value_matrix[i, j] = rewards[i, j] + discount_factor * value_matrix[i, j]
                 
-                max_idx = np.argmax(values)
-                new_value_matrix[i, j] = values[max_idx]
-                policy[i][j] = action_symbols[max_idx]
                 delta = max(delta, abs(new_value_matrix[i, j] - value_matrix[i, j]))
         
         value_matrix = new_value_matrix
@@ -93,7 +89,7 @@ def generate_value_matrix():
     goal = tuple(request.json['goal'])
     dead = tuple(request.json['dead'])
     policy = request.json['policy']
-    value_matrix = policy_iteration(size, obstacles, policy, goal, dead)
+    value_matrix = value_evaluation(size, obstacles, policy, goal, dead)
     return jsonify({'value_matrix': value_matrix})
 
 if __name__ == '__main__':
