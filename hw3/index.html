@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MAB Algorithms Comparison</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f8f9fa;
+      color: #333;
+    }
+    header {
+      background: #343a40;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .section {
+      max-width: 900px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #007bff;
+    }
+    code, pre {
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 14px;
+      display: block;
+      overflow-x: auto;
+    }
+    img {
+      max-width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    .result-img {
+      border: 2px dashed #ccc;
+      background-color: #f9f9f9;
+      padding: 10px;
+      text-align: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Multi-Armed Bandit Algorithms Overview</h1>
+    <p>Epsilon-Greedy, UCB, Softmax, Thompson Sampling</p>
+  </header>
+
+  <div class="section">
+    <h2>1. Epsilon-Greedy</h2>
+    <h3>Algorithm (LaTeX)</h3>
+    <p>The Epsilon-Greedy algorithm balances exploration and exploitation by choosing between exploring a random arm with probability 𝜖 and exploiting the currently known best arm with probability 1 − 𝜖.</p>
+    <div>
+        \[
+        a_t =
+        \begin{cases}
+        \text{random arm} & \text{with probability } \epsilon \\
+        \arg\max_a Q_t(a) & \text{with probability } 1 - \epsilon
+        \end{cases}
+        \]
+    </div>
+    <p>Where:</p>
+    <ul>
+        <li>\( Q_t(a) \) is the estimated value of arm \( a \) at time \( t \).</li>
+    </ul>
+    <h3>ChatGPT Prompt</h3>
+    <p>"Explain the logic behind the Epsilon-Greedy algorithm and how it balances exploration and exploitation in the Multi-Armed Bandit problem. How does the parameter 𝜖 affect this balance, and what are the potential advantages and drawbacks of this approach?"</p>
+    <h3>Python Code & Plot</h3>
+    <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+class EpsilonGreedy:
+    def __init__(self, epsilon, k):
+        self.epsilon = epsilon
+        self.k = k
+        self.Q = np.zeros(k)
+        self.N = np.zeros(k)
+
+    def select_arm(self):
+        if np.random.random() < self.epsilon:
+            return np.random.randint(self.k)  # Explore: choose a random arm
+        else:
+            return np.argmax(self.Q)  # Exploit: choose the arm with the highest estimated value
+
+    def update(self, arm, reward):
+        self.N[arm] += 1
+        self.Q[arm] += (reward - self.Q[arm]) / self.N[arm]
+
+def simulate_bandit(epsilon, bandit, steps):
+    rewards = np.zeros(steps)
+    optimal_action_counts = np.zeros(steps)
+    optimal_action = np.argmax(bandit.Q)
+
+    for step in range(steps):
+        arm = bandit.select_arm()
+        reward = np.random.normal(Q_true[arm], 1)  # Simulate reward with a normal distribution
+        bandit.update(arm, reward)
+
+        rewards[step] = reward
+        if arm == optimal_action:
+            optimal_action_counts[step] = 1
+
+    cumulative_reward = np.cumsum(rewards)
+    cumulative_optimal_action_counts = np.cumsum(optimal_action_counts) / np.arange(1, steps + 1)
+
+    return cumulative_reward, cumulative_optimal_action_counts
+
+# Simulation parameters
+epsilon = 0.1
+k = 10  # Number of arms
+steps = 1000  # Number of steps to simulate
+
+# True reward values for each arm (normally distributed)
+Q_true = np.random.normal(0, 1, k)
+
+# Initialize and simulate Epsilon-Greedy bandit
+bandit = EpsilonGreedy(epsilon, k)
+cumulative_reward, cumulative_optimal_action_counts = simulate_bandit(epsilon, bandit, steps)
+
+# Plot results
+plt.figure(figsize=(12, 6))
+
+# Plot cumulative reward
+plt.subplot(1, 2, 1)
+plt.plot(cumulative_reward, label='Epsilon-Greedy')
+plt.xlabel('Steps')
+plt.ylabel('Cumulative Reward')
+plt.title('Epsilon-Greedy Bandit')
+plt.legend()
+
+# Plot optimal action percentage
+plt.subplot(1, 2, 2)
+plt.plot(cumulative_optimal_action_counts * 100, label='Epsilon-Greedy')
+plt.xlabel('Steps')
+plt.ylabel('% Optimal Action')
+plt.title('Epsilon-Greedy Bandit')
+plt.ylim(0, 100)
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+        </code>
+    </pre>
+    <div class="result-img">
+        <img src="./resources/epsiliion_greedy.png" alt="">
+    </div>
+    <h3>Result Explanation</h3>
+    <ul>
+        <li><strong>Time Complexity: </strong>Each step takes \(O(1)\) time, as only the action selection and update of the estimated values are performed.</li><br>
+        <li><strong>Space Complexity: \(O(n)\), where 𝑛 is the number of arms.</strong></li><br>
+        <li><strong>Analysis: </strong>The Epsilon-Greedy algorithm has a tendency to explore with probability 𝜖, which can result in suboptimal exploration in cases of large 𝜖. The algorithm may converge slowly if 𝜖 is too high.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>2. Upper Confidence Bound (UCB)</h2>
+    <h3>Algorithm (LaTeX)</h3>
+    <p>UCB selects arms based on both the average reward and the uncertainty (upper confidence bound) of that arm’s estimated value.</p>
+    <div>
+        \[
+        a_t = \arg\max_a \left( \hat{Q}_t(a) + \sqrt{\frac{2 \ln t}{n_t(a)}} \right)
+        \]
+    </div>
+    <p>Where:</p>
+    <ul>
+        <li>\( \hat{Q}_t(a) \) is the estimated value of arm \( a \) at time \( t \).</li>
+        <li>\( n_t(a) \) is the number of times arm \( a \) has been selected up to time \( t \).</li>
+        <li>\( t \) is the current time step.</li>
+    </ul>
+    <h3>ChatGPT Prompt</h3>
+    <p>"Explain the logic behind the UCB algorithm. How does the upper confidence bound encourage exploration of uncertain arms and exploitation of promising ones? What are the key differences between UCB and Epsilon-Greedy?"</p>
+    <h3>Python Code & Plot</h3>
+    <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+class UCB:
+    def __init__(self, c, k):
+        self.c = c
+        self.k = k
+        self.Q = np.zeros(k)
+        self.N = np.zeros(k)
+        self.t = 0
+
+    def select_arm(self):
+        self.t += 1
+        ucb_values = self.Q + self.c * np.sqrt(np.log(self.t) / (self.N + 1e-5))
+        return np.argmax(ucb_values)
+
+    def update(self, arm, reward):
+        self.N[arm] += 1
+        self.Q[arm] += (reward - self.Q[arm]) / self.N[arm]
+
+def simulate_bandit(ucb, steps):
+    rewards = np.zeros(steps)
+    optimal_action_counts = np.zeros(steps)
+    optimal_action = np.argmax(ucb.Q)
+
+    for step in range(steps):
+        arm = ucb.select_arm()
+        reward = np.random.normal(Q_true[arm], 1)  # Simulate reward with a normal distribution
+        ucb.update(arm, reward)
+
+        rewards[step] = reward
+        if arm == optimal_action:
+            optimal_action_counts[step] = 1
+
+    cumulative_reward = np.cumsum(rewards)
+    cumulative_optimal_action_counts = np.cumsum(optimal_action_counts) / np.arange(1, steps + 1)
+
+    return cumulative_reward, cumulative_optimal_action_counts
+
+# Simulation parameters
+c = 2  # Exploration parameter
+k = 10  # Number of arms
+steps = 1000  # Number of steps to simulate
+
+# True reward values for each arm (normally distributed)
+Q_true = np.random.normal(0, 1, k)
+
+# Initialize and simulate UCB bandit
+ucb = UCB(c, k)
+cumulative_reward, cumulative_optimal_action_counts = simulate_bandit(ucb, steps)
+
+# Plot results
+plt.figure(figsize=(12, 6))
+
+# Plot cumulative reward
+plt.subplot(1, 2, 1)
+plt.plot(cumulative_reward, label='UCB')
+plt.xlabel('Steps')
+plt.ylabel('Cumulative Reward')
+plt.title('UCB Bandit')
+plt.legend()
+
+# Plot optimal action percentage
+plt.subplot(1, 2, 2)
+plt.plot(cumulative_optimal_action_counts * 100, label='UCB')
+plt.xlabel('Steps')
+plt.ylabel('% Optimal Action')
+plt.title('UCB Bandit')
+plt.ylim(0, 100)
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+        </code></pre>
+    <div class="result-img">
+        <img src="./resources/ucb.png" alt="">
+    </div>
+    <h3>Result Explanation</h3>
+    <ul>
+        <li><strong>Time Complexity: </strong>\(O(n)\) per arm selection due to the logarithmic term in UCB.</li><br>
+        <li><strong>Space Complexity: \(O(n)\) for storing arm estimates and counts.</strong></li><br>
+        <li><strong>Analysis: </strong>UCB efficiently balances exploration and exploitation, particularly in environments with varying arm rewards. It tends to perform better than Epsilon-Greedy in settings with a large number of arms.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>3. Softmax</h2>
+    <h3>Algorithm (LaTeX)</h3>
+    <p>Softmax selects arms probabilistically based on their estimated values, giving higher probability to arms with higher estimated rewards.</p>
+    <p>
+        \[
+        P(a_t = a) = \frac{e^{Q_t(a)/\tau}}{\sum_b e^{Q_t(b)/\tau}}
+        \]
+    </p>
+    <p>Where:</p>
+    <ul>
+        <li>\( Q_t(a) \) is the estimated value of arm \( a \) at time \( t \).</li>
+        <li>\( \tau \) (tau) is the temperature parameter controlling exploration.</li>
+        <li>The denominator sums over all possible arms \( b \).</li>
+    </ul>
+    <h3>ChatGPT Prompt</h3>
+    <p>"How does the Softmax algorithm probabilistically choose arms based on their estimated rewards? How does the temperature parameter 𝜏 influence exploration vs. exploitation?."</p>
+    <h3>Python Code & Plot</h3>
+    <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+class SoftmaxBandit:
+    def __init__(self, tau, k):
+        self.tau = tau
+        self.k = k
+        self.Q = np.zeros(k)
+        self.N = np.zeros(k)
+
+    def select_arm(self):
+        preferences = np.exp(self.Q / self.tau)
+        probabilities = preferences / np.sum(preferences)
+        return np.random.choice(self.k, p=probabilities)
+
+    def update(self, arm, reward):
+        self.N[arm] += 1
+        self.Q[arm] += (reward - self.Q[arm]) / self.N[arm]
+
+def simulate_bandit(softmax_bandit, steps):
+    rewards = np.zeros(steps)
+    optimal_action_counts = np.zeros(steps)
+    optimal_action = np.argmax(Q_true)
+
+    for step in range(steps):
+        arm = softmax_bandit.select_arm()
+        reward = np.random.normal(Q_true[arm], 1)
+        softmax_bandit.update(arm, reward)
+
+        rewards[step] = reward
+        if arm == optimal_action:
+            optimal_action_counts[step] = 1
+
+    cumulative_reward = np.cumsum(rewards)
+    cumulative_optimal_action_counts = np.cumsum(optimal_action_counts) / np.arange(1, steps + 1)
+
+    return cumulative_reward, cumulative_optimal_action_counts
+
+# Simulation parameters
+tau = 0.1  # Temperature parameter
+k = 10
+steps = 1000
+
+# True mean rewards
+Q_true = np.random.normal(0, 1, k)
+
+# Run Softmax simulation
+softmax_bandit = SoftmaxBandit(tau, k)
+cumulative_reward, cumulative_optimal_action_counts = simulate_bandit(softmax_bandit, steps)
+
+# Plotting
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.plot(cumulative_reward, label='Softmax')
+plt.xlabel('Steps')
+plt.ylabel('Cumulative Reward')
+plt.title('Softmax Bandit')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(cumulative_optimal_action_counts * 100, label='Softmax')
+plt.xlabel('Steps')
+plt.ylabel('% Optimal Action')
+plt.title('Softmax Bandit')
+plt.ylim(0, 100)
+plt.legend()
+
+plt.tight_layout()
+plt.show()</code></pre>
+    <div class="result-img">
+        <img src="./resources/softmax.png" alt="">
+    </div>
+    <h3>Result Explanation</h3>
+    <ul>
+        <li><strong>Time Complexity: </strong>\(O(n)\) for arm selection due to the computation of probabilities.</li><br>
+        <li><strong>Space Complexity: \(O(n)\).</strong></li><br>
+        <li><strong>Analysis: </strong>The Softmax algorithm offers a smooth trade-off between exploration and exploitation, but may not converge as quickly as UCB in environments with distinct rewards. The temperature 𝜏 is critical for controlling this balance.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>4. Thompson Sampling</h2>
+    <h3>Algorithm (LaTeX)</h3>
+    <p>
+        Thompson Sampling uses a Bayesian approach, where the posterior distribution of the rewards for each arm is updated as each reward is observed.
+    </p>
+    <p>
+        \[
+        P(\theta \mid x) = \frac{P(x \mid \theta) P(\theta)}{P(x)}
+        \]
+    </p>
+    <p>Where:</p>
+    <ul>
+        <li>\( P(\theta \mid x) \) is the posterior probability of \( \theta \) given data \( x \).</li>
+        <li>\( P(x \mid \theta) \) is the likelihood of data \( x \) given \( \theta \).</li>
+        <li>\( P(\theta) \) is the prior probability of \( \theta \).</li>
+        <li>\( P(x) \) is the marginal likelihood (normalizing constant).</li>
+    </ul>
+    <h3>ChatGPT Prompt</h3>
+    <p>"Explain how Thompson Sampling uses Bayesian inference to select arms. How does it handle uncertainty in the reward distribution, and how does it compare to other algorithms like UCB or Epsilon-Greedy?"</p>
+    <h3>Python Code & Plot</h3>
+    <pre><code>import numpy as np
+import matplotlib.pyplot as plt
+
+class ThompsonSamplingBandit:
+    def __init__(self, k):
+        self.k = k
+        self.alpha = np.ones(k)
+        self.beta = np.ones(k)
+
+    def select_arm(self):
+        samples = np.random.beta(self.alpha, self.beta)
+        return np.argmax(samples)
+
+    def update(self, arm, reward):
+        self.alpha[arm] += reward
+        self.beta[arm] += 1 - reward
+
+def simulate_bandit(ts_bandit, steps, true_probs):
+    rewards = np.zeros(steps)
+    optimal_action_counts = np.zeros(steps)
+    optimal_action = np.argmax(true_probs)
+
+    for step in range(steps):
+        arm = ts_bandit.select_arm()
+        reward = np.random.binomial(1, true_probs[arm])
+        ts_bandit.update(arm, reward)
+
+        rewards[step] = reward
+        if arm == optimal_action:
+            optimal_action_counts[step] = 1
+
+    cumulative_reward = np.cumsum(rewards)
+    cumulative_optimal_action_counts = np.cumsum(optimal_action_counts) / np.arange(1, steps + 1)
+
+    return cumulative_reward, cumulative_optimal_action_counts
+
+# Simulation parameters
+k = 10
+steps = 1000
+true_probs = np.random.uniform(0.1, 0.9, k)
+
+# Run Thompson Sampling simulation
+ts_bandit = ThompsonSamplingBandit(k)
+cumulative_reward, cumulative_optimal_action_counts = simulate_bandit(ts_bandit, steps, true_probs)
+
+# Plotting
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.plot(cumulative_reward, label='Thompson Sampling')
+plt.xlabel('Steps')
+plt.ylabel('Cumulative Reward')
+plt.title('Thompson Sampling Bandit')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(cumulative_optimal_action_counts * 100, label='Thompson Sampling')
+plt.xlabel('Steps')
+plt.ylabel('% Optimal Action')
+plt.title('Thompson Sampling Bandit')
+plt.ylim(0, 100)
+plt.legend()
+
+plt.tight_layout()
+plt.show()</code></pre>
+    <div class="result-img">
+        <img src="./resources/thompson_sampling.png" alt="">
+    </div>
+    <h3>Result Explanation</h3>
+    <ul>
+        <li><strong>Time Complexity: </strong>\(O(n)\) for arm selection due to the sampling process.</li><br>
+        <li><strong>Space Complexity: \(O(n)\).</strong></li><br>
+        <li><strong>Analysis: </strong>Thompson Sampling is a powerful Bayesian approach that provides good results, especially in non-stationary environments, and performs well in balancing exploration and exploitation.</li>
+    </ul>
+  </div>
+</body>
+</html>
